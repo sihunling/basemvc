@@ -21,6 +21,9 @@ public class MainActivity extends BaseActivity {
   @Override public void doBusiness() {
     super.doBusiness();
 
+    Toast.makeText(this,"open succed",Toast.LENGTH_LONG).show();
+
+
 
     //Intent intent=new Intent(MainActivity.this,Main2Activity.class);
     //    //startActivity(intent);

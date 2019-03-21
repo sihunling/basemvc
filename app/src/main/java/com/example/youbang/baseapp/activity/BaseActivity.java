@@ -1,5 +1,6 @@
 package com.example.youbang.baseapp.activity;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
@@ -18,12 +19,15 @@ import android.view.Window;
 import cn.bingoogolapple.swipebacklayout.BGASwipeBackHelper;
 import com.blankj.utilcode.util.NetworkUtils;
 import com.blankj.utilcode.util.TimeUtils;
+import com.blankj.utilcode.util.Utils;
 import com.example.youbang.baseapp.R;
 import com.example.youbang.baseapp.log.L;
 import com.example.youbang.baseapp.message.NetwordChangedMSG;
 import com.example.youbang.baseapp.message.RxBus;
 import com.example.youbang.baseapp.receiver.NetwordChangedReceiver;
 
+import com.example.youbang.baseapp.utils.RxUtils;
+import com.trello.rxlifecycle2.components.support.RxAppCompatActivity;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -56,7 +60,7 @@ import java.util.concurrent.TimeUnit;
  * 19.侧滑返回
  * 20.findviewbyid
  */
-public class BaseActivity extends AppCompatActivity implements IBaseActivity,BGASwipeBackHelper.Delegate {
+public class BaseActivity extends RxAppCompatActivity implements IBaseActivity,BGASwipeBackHelper.Delegate {
   protected static final String TAG=BaseActivity.class.getSimpleName();
   //滑动返回辅助类
   protected  BGASwipeBackHelper mSwipeBackHelper;
@@ -102,21 +106,22 @@ public class BaseActivity extends AppCompatActivity implements IBaseActivity,BGA
     super.onResume();
     //刷新数据等
     resume();
-    // TODO: 2019/2/23 注册网络监听器,泄漏问题没有处理
+    //  2019/2/23 注册网络监听器
     if(isPing)
       ping= Observable.interval(2000,TimeUnit.MILLISECONDS)
-          .observeOn(Schedulers.io())
+
           .map(new Function<Long, Boolean>() {
             @Override public Boolean apply(Long aLong) {
+              L.d(TAG,"is main thread=="+com.blankj.utilcode.util.ThreadUtils.isMainThread());
               if(!NetworkUtils.isAvailableByPing("www.baidu.com")){
                 return false;
               }
 
               return true;
             }
-          }).observeOn(AndroidSchedulers.mainThread())
-          //.as(AutoDispose.<Boolean>autoDisposable(AndroidLifecycleScopeProvider.from(
-          //     this,Lifecycle.Event.ON_DESTROY)))
+          })
+          .compose(RxUtils.transformerToMain())
+          .compose(RxUtils.bindToLifecycle((Context)this))
           .subscribe(new Consumer<Boolean>() {
             @Override public void accept(Boolean aBoolean) throws Exception {
               onNetwordPing(aBoolean);
